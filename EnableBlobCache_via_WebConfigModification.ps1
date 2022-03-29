@@ -2,7 +2,7 @@
 .SYNOPSIS
     Enables and configures the SharePoint BLOB Cache. 
 
-.LINK
+    based upon
     http://blog.kuppens-switsers.net/sharepoint/enabling-blob-cache-sharepoint-using-powershell/
     
 .DESCRIPTION
@@ -13,6 +13,13 @@
     Author   : Bart Kuppens
     Version  : 2.0
 
+    File Name: EnableBlobCache_via_WebConfigModification.PS1
+    Author   : Rainer Asbach
+    Version  : 3.0
+
+    If you have to modify the value for the file extensions that are included in the BlobCache you can change this in the code
+
+
 .PARAMETER Url
     Specifies the URL of the Web Application for which the BLOB cache should be enabled. 
 
@@ -20,12 +27,25 @@
     Specifies the location of the BLOB Cache. 	 
 
 .EXAMPLE
-    PS > .\Enable-BlobCache.ps1 -Url http://intranet.westeros.local -Location d:\BlobCache\Intranet
+    PS > .\EnableBlobCache_via_WebConfigModification.ps1 -Url http://intranet.westeros.local -Location d:\BlobCache\Intranet
 
    Description
    -----------
    This script enables the BLOB cache for the http://intranet.westeros.local web application and stores
    it under d:\blobcache\intranet
+
+.ToDo
+   Add a parameter for the file extensions
+   Add a parameter to add or remove file extensions
+   Add a switch to reset the file extensions to the default
+   Add a parameter to change the max-age attribute that controls the local caching
+   Add a parameter that shows the current values
+
+.Versions
+   3.0
+     Add the option to set the file extensions
+     Add the option to overwrite the settings
+   
 #>
 param( 
    [Parameter(Mandatory=$true, ValueFromPipeline=$false, Position=0)] 
@@ -34,6 +54,7 @@ param(
    [string]$Location
 ) 
  
+
  $filePath = "\.(gif|jpg|jpeg|jpe|jfif|bmp|dib|tif|tiff|themedbmp|themedcss|themedgif|themedjpg|themedpng|ico|png|wdp|hdp|css|js|asf|avi|flv|m4v|mov|mp3|mp4|mpeg|mpg|rm|rmvb|wma|wmv|ogg|ogv|oga|webm|xap)$"
 
 # Load the SharePoint PowerShell snapin if needed
