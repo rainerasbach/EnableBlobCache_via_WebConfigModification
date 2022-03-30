@@ -37,21 +37,32 @@
 .ToDo
    Add a parameter for the file extensions
    Add a parameter to add or remove file extensions
-   Add a switch to reset the file extensions to the default
-   Add a parameter to change the max-age attribute that controls the local caching
    Add a parameter that shows the current values
 
 .Versions
    3.0
-     Add the option to set the file extensions
-     Add the option to overwrite the settings
+     Added the option to set the file extensions
+     Added the option to overwrite the settings
+   3.1
+     Added parameters for DisableBlobCache, BlobCacheSize,MaxAge,WebConfigModifcationOwner with proper defaults
+     Added  -reset parameter to set the defaults
    
 #>
 param( 
    [Parameter(Mandatory=$true, ValueFromPipeline=$false, Position=0)] 
    [string]$Url,
-   [Parameter(Mandatory=$true, ValueFromPipeline=$false, Position=1)] 
-   [string]$Location
+   [Parameter(Mandatory=$false, ValueFromPipeline=$false, Position=1)] 
+   [string]$Location="C:\BlobCache\14",
+   [Parameter(Mandatory=$false, ValueFromPipeline=$false, Position=2)]
+   [string]$BlobCacheMaxSizeInGB="10", 
+   [Parameter(Mandatory=$false, ValueFromPipeline=$false, Position=3)] 
+   [switch]$DisableBlobCache,
+   [Parameter(Mandatory=$false, ValueFromPipeline=$false, Position=4)]
+   [string]$MaxAgeInSeconds="86400", 
+   [Parameter(Mandatory=$false, ValueFromPipeline=$false, Position=5)]
+   [string]$WebConfigModificationOwner="BlobCacheMod", 
+   [Parameter(Mandatory=$false, ValueFromPipeline=$false, Position=6)]
+   [switch]$Reset
 ) 
  
 
@@ -64,7 +75,26 @@ if ((Get-PSSnapin -Name Microsoft.SharePoint.PowerShell -ErrorAction SilentlyCon
 }
  
 $webApp = Get-SPWebApplication $Url
-$WebConfigModificationOwner="BlobCacheMod"
+
+if ($Reset)
+{
+   $Location="C:\BlobCache\14"
+   $BlobCacheMaxSizeInGB="10"
+   $DisableBlobCache=$true
+   $MaxAgeInSeconds="86400"
+   $WebConfigModificationOwner="BlobCacheMod"
+}
+
+if ($DisableBlobCache)
+{
+    $BlobCacheEnabled="false"
+}
+else
+{
+    $BlobCacheEnabled="true"
+}
+
+
 
 $modifications = $webApp.WebConfigModifications | ? { $_.Owner -eq $WebConfigModificationOwner }
 if ($modifications.Count -ne $null -and $modifications.Count -gt 0)
@@ -86,11 +116,11 @@ if ($modifications.Count -ne $null -and $modifications.Count -gt 0)
     $webApp.Parent.ApplyWebConfigModifications()
 }
  
-# Enable Blob cache
+# Enable/Disable Blob cache
 [Microsoft.SharePoint.Administration.SPWebConfigModification] $config1 = New-Object Microsoft.SharePoint.Administration.SPWebConfigModification 
 $config1.Path = "configuration/SharePoint/BlobCache" 
 $config1.Name = "enabled"
-$config1.Value = "true"
+$config1.Value = $BlobCacheEnabled
 $config1.Sequence = 0
 $config1.Owner = $WebConfigModificationOwner 
 $config1.Type = 1 
@@ -99,7 +129,7 @@ $config1.Type = 1
 [Microsoft.SharePoint.Administration.SPWebConfigModification] $config2 = New-Object Microsoft.SharePoint.Administration.SPWebConfigModification 
 $config2.Path = "configuration/SharePoint/BlobCache" 
 $config2.Name = "max-age"
-$config2.Value = "86400"
+$config2.Value = $MaxAgeInSeconds
 $config2.Sequence = 0
 $config2.Owner = $WebConfigModificationOwner 
 $config2.Type = 1 
@@ -121,11 +151,24 @@ $config4.Value = $FilePath
 $config4.Sequence = 0
 $config4.Owner = $WebConfigModificationOwner 
 $config4.Type = 1
+
+# Set the size of the BlobCache in GB
+[Microsoft.SharePoint.Administration.SPWebConfigModification] $config5 = New-Object Microsoft.SharePoint.Administration.SPWebConfigModification 
+$config5.Path = "configuration/SharePoint/BlobCache" 
+$config5.Name = "maxSize"
+$config5.Value = $BlobCacheMaxSizeInGB
+$config5.Sequence = 0
+$config5.Owner = $WebConfigModificationOwner 
+$config5.Type = 1
  
+
 #Add mods to webapp and apply to web.config
 $webApp.WebConfigModifications.Add($config1)
 $webApp.WebConfigModifications.Add($config2)
 $webApp.WebConfigModifications.Add($config3)
 $webApp.WebConfigModifications.Add($config4)
+$webApp.WebConfigModifications.Add($config5)
 $webApp.update()
 $webApp.Parent.ApplyWebConfigModifications()
+
+#$webApp.WebConfigModifications
